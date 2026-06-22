@@ -16,10 +16,12 @@ class KmlWriter:
         for folder in doc.folders:
             self._write_folder(doc_elem, folder, doc.coord_type)
 
-        xml_str = minidom.parseString(ET.tostring(root, encoding='unicode')).toprettyxml(indent='\t')
+        xml_bytes = minidom.parseString(
+            ET.tostring(root, encoding='unicode')
+        ).toprettyxml(indent='\t', encoding='UTF-8')
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(xml_str)
+        with open(filepath, 'wb') as f:
+            f.write(xml_bytes)
 
     def _write_folder(self, parent, folder, coord_type):
         folder_elem = ET.SubElement(parent, 'Folder')
