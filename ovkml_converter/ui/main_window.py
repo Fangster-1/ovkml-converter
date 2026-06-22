@@ -6,8 +6,21 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ovkml_converter.parsers import OvkmlParser, OvobjParser
-from ovkml_converter.writers import KmlWriter, ShpWriter, DxfWriter
+from ovkml_converter.convert.conversion_service import convert_file
+from ovkml_converter.models.geo_objects import CoordType
+
+CRS_LABELS = ["与输入坐标系一致", "WGS84", "CGCS2000", "GCJ02", "BD09"]
+_LABEL_TO_CRS = {
+    "与输入坐标系一致": CoordType.UNKNOWN,
+    "WGS84": CoordType.WGS84,
+    "CGCS2000": CoordType.CGCS2000,
+    "GCJ02": CoordType.GCJ02,
+    "BD09": CoordType.BD09,
+}
+
+
+def label_to_crs(label: str) -> CoordType:
+    return _LABEL_TO_CRS.get(label, CoordType.UNKNOWN)
 
 
 class MainWindow:
@@ -48,6 +61,20 @@ class MainWindow:
         ttk.Radiobutton(fmt_frame, text="SHP", variable=self.output_format, value="shp").pack(side=tk.LEFT, padx=15)
         ttk.Radiobutton(fmt_frame, text="DXF", variable=self.output_format, value="dxf").pack(side=tk.LEFT, padx=15)
         ttk.Radiobutton(fmt_frame, text="全部", variable=self.output_format, value="all").pack(side=tk.LEFT, padx=15)
+
+        crs_frame = ttk.LabelFrame(self.root, text="坐标系")
+        crs_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        ttk.Label(crs_frame, text="目标坐标系:").pack(side=tk.LEFT, padx=(10, 2))
+        self.target_crs_var = tk.StringVar(value=CRS_LABELS[0])
+        ttk.Combobox(crs_frame, textvariable=self.target_crs_var,
+                     values=CRS_LABELS, state="readonly", width=16).pack(side=tk.LEFT, padx=2)
+
+        ttk.Label(crs_frame, text="OVOBJ源坐标系:").pack(side=tk.LEFT, padx=(20, 2))
+        self.ovobj_src_var = tk.StringVar(value="CGCS2000")
+        ttk.Combobox(crs_frame, textvariable=self.ovobj_src_var,
+                     values=["CGCS2000", "WGS84", "GCJ02", "BD09"],
+                     state="readonly", width=12).pack(side=tk.LEFT, padx=2)
 
         dir_frame = ttk.Frame(self.root)
         dir_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -115,46 +142,30 @@ class MainWindow:
         self.progress["maximum"] = len(self.files)
         self.progress["value"] = 0
 
-        thread = threading.Thread(target=self._do_convert, args=(list(self.files), self.output_format.get(), output_dir), daemon=True)
+        target_crs = label_to_crs(self.target_crs_var.get())
+        ovobj_src = label_to_crs(self.ovobj_src_var.get())
+        thread = threading.Thread(
+            target=self._do_convert,
+            args=(list(self.files), self.output_format.get(), output_dir, target_crs, ovobj_src),
+            daemon=True)
         thread.start()
 
-    def _do_convert(self, files, fmt, output_dir):
-        ovkml_parser = OvkmlParser()
-        ovobj_parser = OvobjParser()
-        kml_writer = KmlWriter()
-        shp_writer = ShpWriter()
-        dxf_writer = DxfWriter()
-
+    def _do_convert(self, files, fmt, output_dir, target_crs, ovobj_src):
+        fmt_list = ["kml", "shp", "dxf"] if fmt == "all" else [fmt]
         success = 0
         fail = 0
-
         for i, filepath in enumerate(files):
             try:
                 self.root.after(0, lambda v=i, m=f"正在处理: {Path(filepath).name}": self._update_progress(v, m))
-
-                ext = Path(filepath).suffix.lower()
-                if ext == ".ovkml":
-                    doc = ovkml_parser.parse(filepath)
-                elif ext == ".ovobj":
-                    doc = ovobj_parser.parse(filepath)
-                else:
-                    raise ValueError(f"不支持的格式: {ext}")
-
-                stem = Path(filepath).stem
-                out = Path(output_dir)
-
-                if fmt in ("kml", "all"):
-                    kml_writer.write(doc, str(out / f"{stem}.kml"))
-                if fmt in ("shp", "all"):
-                    shp_writer.write(doc, str(out / f"{stem}.shp"))
-                if fmt in ("dxf", "all"):
-                    dxf_writer.write(doc, str(out / f"{stem}.dxf"))
-
+                res = convert_file(filepath, target_crs, ovobj_src, fmt_list, output_dir, sibling_files=files)
+                msg = f"{Path(filepath).name}: 源={res['source_crs'].value} → 目标={res['target_crs'].value}"
+                if res["out_of_china"]:
+                    msg += "（含境外点，未做偏移）"
+                self.root.after(0, lambda m=msg: self.status_var.set(m))
                 success += 1
             except Exception as e:
                 fail += 1
                 self.root.after(0, lambda m=f"错误: {Path(filepath).name} - {e}": self.status_var.set(m))
-
         self.root.after(0, lambda: self._finish(success, fail))
 
     def _update_progress(self, value, msg):
