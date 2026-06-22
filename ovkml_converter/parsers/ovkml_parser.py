@@ -137,14 +137,25 @@ class OvkmlParser:
 
         multi = elem.find(f'{KML_NS}MultiGeometry')
         if multi is not None:
+            tag_to_type = {'Point': GeoType.POINT, 'LineString': GeoType.LINE}
             for child in multi:
                 tag = child.tag.replace(KML_NS, '')
-                if tag == 'Point':
+                if tag in tag_to_type:
                     coords = self._parse_coordinates(child)
                     if coords:
                         return GeoObject(
                             name=name, description=description,
-                            geo_type=GeoType.POINT, coordinates=coords,
+                            geo_type=tag_to_type[tag], coordinates=coords,
+                            coord_type=coord_type, style=style, attributes=attributes
+                        )
+                if tag == 'Polygon':
+                    outer = child.find(f'{KML_NS}outerBoundaryIs')
+                    ring = outer.find(f'{KML_NS}LinearRing') if outer is not None else None
+                    coords = self._parse_coordinates(ring) if ring is not None else []
+                    if coords:
+                        return GeoObject(
+                            name=name, description=description,
+                            geo_type=GeoType.POLYGON, coordinates=coords,
                             coord_type=coord_type, style=style, attributes=attributes
                         )
 
@@ -179,6 +190,8 @@ class OvkmlParser:
             return CoordType.GCJ02
         elif 'WGS84' in text or 'WGS' in text:
             return CoordType.WGS84
+        elif 'BD09' in text or 'BD' in text or '百度' in text:
+            return CoordType.BD09
         return CoordType.UNKNOWN
 
     def _parse_style(self, elem) -> dict:
