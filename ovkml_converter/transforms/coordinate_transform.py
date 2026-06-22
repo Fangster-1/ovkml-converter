@@ -1,4 +1,7 @@
 import math
+from copy import deepcopy
+
+from ..models.geo_objects import CoordType, GeoDocument
 
 X_PI = math.pi * 3000.0 / 180.0
 A = 6378245.0                      # 克拉索夫斯基椭球长半轴
@@ -67,9 +70,6 @@ def bd09_to_gcj02(lon: float, lat: float) -> tuple[float, float]:
     theta = math.atan2(y, x) - 0.000003 * math.cos(x * X_PI)
     return z * math.cos(theta), z * math.sin(theta)
 
-
-from copy import deepcopy
-from ..models.geo_objects import CoordType, GeoDocument
 
 _WGS_LIKE = (CoordType.WGS84, CoordType.CGCS2000)
 

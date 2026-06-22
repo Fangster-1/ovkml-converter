@@ -22,14 +22,29 @@ def resolve_source_crs(filepath, parsed_doc, ovobj_src_crs, sibling_files):
                     return sib.coord_type
             except Exception:
                 pass
+    same_dir = Path(filepath).with_suffix(".ovkml")
+    if same_dir.exists():
+        try:
+            sib = OvkmlParser().parse(str(same_dir))
+            if sib.coord_type != CoordType.UNKNOWN:
+                return sib.coord_type
+        except Exception:
+            pass
     return ovobj_src_crs
 
 
-def _stamp_source(doc: GeoDocument, src: CoordType) -> None:
+def _stamp_source(doc: GeoDocument, src: CoordType, override_all: bool) -> None:
     for folder in doc.folders:
         for obj in folder.objects:
-            obj.coord_type = src
+            if override_all or obj.coord_type == CoordType.UNKNOWN:
+                obj.coord_type = src
     doc.coord_type = src
+
+
+def _crs_class(crs: CoordType):
+    if crs in (CoordType.WGS84, CoordType.CGCS2000):
+        return "wgs"
+    return crs
 
 
 def _any_in_china(doc: GeoDocument) -> bool:
@@ -51,7 +66,7 @@ def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_
         raise ValueError(f"不支持的格式: {ext}")
 
     src = resolve_source_crs(filepath, doc, ovobj_src_crs, sibling_files)
-    _stamp_source(doc, src)
+    _stamp_source(doc, src, override_all=(ext == ".ovobj"))
 
     in_china = _any_in_china(doc)
     out_doc = transform_document(doc, target_crs)
@@ -66,7 +81,8 @@ def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_
     if "dxf" in formats:
         DxfWriter().write(out_doc, str(out / f"{stem}.dxf"))
 
-    needs_offset = target_crs not in (CoordType.UNKNOWN,) and effective_target != src
+    needs_offset = (target_crs != CoordType.UNKNOWN
+                    and _crs_class(src) != _crs_class(effective_target))
     return {
         "source_crs": src,
         "target_crs": effective_target,
