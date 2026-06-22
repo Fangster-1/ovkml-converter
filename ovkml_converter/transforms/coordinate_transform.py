@@ -66,3 +66,52 @@ def bd09_to_gcj02(lon: float, lat: float) -> tuple[float, float]:
     z = math.sqrt(x * x + y * y) - 0.00002 * math.sin(y * X_PI)
     theta = math.atan2(y, x) - 0.000003 * math.cos(x * X_PI)
     return z * math.cos(theta), z * math.sin(theta)
+
+
+from copy import deepcopy
+from ..models.geo_objects import CoordType, GeoDocument
+
+_WGS_LIKE = (CoordType.WGS84, CoordType.CGCS2000)
+
+
+def _to_gcj02(lon: float, lat: float, src: CoordType) -> tuple[float, float]:
+    if src in _WGS_LIKE:
+        return wgs84_to_gcj02(lon, lat)
+    if src == CoordType.BD09:
+        return bd09_to_gcj02(lon, lat)
+    return lon, lat  # GCJ02 或 UNKNOWN：原值
+
+
+def _from_gcj02(lon: float, lat: float, dst: CoordType) -> tuple[float, float]:
+    if dst in _WGS_LIKE:
+        return gcj02_to_wgs84(lon, lat)
+    if dst == CoordType.BD09:
+        return gcj02_to_bd09(lon, lat)
+    return lon, lat  # GCJ02 或 UNKNOWN：原值
+
+
+def transform_point(lon: float, lat: float, src: CoordType, dst: CoordType) -> tuple[float, float]:
+    if src == dst:
+        return lon, lat
+    if src in _WGS_LIKE and dst in _WGS_LIKE:
+        return lon, lat
+    if src == CoordType.UNKNOWN or dst == CoordType.UNKNOWN:
+        return lon, lat
+    glon, glat = _to_gcj02(lon, lat, src)
+    return _from_gcj02(glon, glat, dst)
+
+
+def transform_document(doc: GeoDocument, target: CoordType) -> GeoDocument:
+    if target == CoordType.UNKNOWN:
+        return doc
+    new = deepcopy(doc)
+    for folder in new.folders:
+        for obj in folder.objects:
+            src = obj.coord_type if obj.coord_type != CoordType.UNKNOWN else new.coord_type
+            if src == CoordType.UNKNOWN:
+                continue
+            for p in obj.coordinates:
+                p.lon, p.lat = transform_point(p.lon, p.lat, src, target)
+            obj.coord_type = target
+    new.coord_type = target
+    return new
