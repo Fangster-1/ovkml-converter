@@ -33,6 +33,22 @@ def resolve_source_crs(filepath, parsed_doc, ovobj_src_crs, sibling_files):
     return ovobj_src_crs
 
 
+def detect_ovkml_crs(filepath):
+    """OVKML 文件返回其检测到的坐标系（读 OvCoordType）；OVOBJ 或检测失败返回 None。
+
+    供 UI 在添加文件时自动回填"输入坐标系"下拉用。
+    """
+    if Path(filepath).suffix.lower() != ".ovkml":
+        return None
+    try:
+        doc = OvkmlParser().parse(filepath)
+        if doc.coord_type != CoordType.UNKNOWN:
+            return doc.coord_type
+    except Exception:
+        pass
+    return None
+
+
 def _stamp_source(doc: GeoDocument, src: CoordType, override_all: bool) -> None:
     for folder in doc.folders:
         for obj in folder.objects:
