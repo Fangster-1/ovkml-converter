@@ -21,16 +21,15 @@ build.bat
 
 注意：`build.bat` 用 PyInstaller 的 `--exclude-module` 主动排除了 PyQt5/PyQt6/numpy/ezdxf 等模块以减小体积——这些**确实不是本项目的依赖**，不要误把它们当作缺失项装回来。
 
-## 实际依赖（与文档不符之处）
+## 实际依赖
 
-代码的真实外部依赖**只有 `pyshp`**（`import shapefile`）。需要留意几处历史文档残留：
+代码的真实外部依赖**只有 `pyshp`**（`import shapefile`）。几点说明：
 
-- `AGENTS.md` 称 UI 用 PyQt5，**实际是 Tkinter**（标准库，见 `ovkml_converter/ui/main_window.py`）。
+- UI 是 **Tkinter**（标准库，见 `ovkml_converter/ui/main_window.py`），不是 PyQt。
 - DXF 写出是**手写裸 DXF 文本**（`dxf_writer.py`），并未使用 ezdxf。
+- 坐标转换是**纯 `math` 实现，无新增依赖**。
 - 仓库现有 `tests/` 目录（pytest，35 个测试覆盖坐标转换、OVOBJ 分组、各写入器）。运行：`D:\GD\arcgispro_clone\python.exe -m pytest tests/ -v`。
-- `requirements.txt` 只列了 `pyshp`，是准确的；坐标转换是**纯 `math` 实现，无新增依赖**。
-
-修改文档或依赖时请以代码实际 import 为准。
+- `开发方案.md` 是早期设计稿，其中"用 PyQt5/ezdxf""有固定二进制头结构"等说法**与最终实现不符**，以代码实际 import 为准。本次坐标转换等改动的设计/计划见 `docs/superpowers/`。
 
 ## 架构
 
@@ -55,5 +54,4 @@ build.bat
 - **坐标系**：内部用 `CoordType` 枚举（WGS84 / GCJ02 / CGCS2000 / BD09 / UNKNOWN）。**现在会做实际坐标转换**（见 `transforms/`）：默认"与输入一致"不转换，用户在 UI 选目标系才纠偏。源坐标系判定——OVKML 读 `<OvCoordType>` 自动检测（逐对象保留）；OVOBJ 无该信息，用同名 `.ovkml` 兜底、否则用 UI 手选（默认 CGCS2000）。CGCS2000≈WGS84（恒等），真正有偏移的是 GCJ02/BD09。
 - **坐标顺序陷阱**：KML/OVKML 是 `经度,纬度,高程`；OVOBJ 二进制里是 `纬度,经度`。改解析器时务必注意。
 - **OVOBJ 解析是启发式的**：点对象（类型码 4）较可靠；线（2）、面（3）缺少样例验证，可能不准。改动 `_try_parse_object` / `_skip_tail` 后应拿 `奥维格式数据/` 下样例回归验证（如 `姚安县验证.ovobj` 含 32 个点）。
-- **参考实现** `6ca3b-main/`：原版工具的预编译二进制（含 `OVKML2KML.exe`），**无源码、仅作行为参考**，不可修改。
 - 样例与期望输出在 `奥维格式数据/`（含已生成的 `_points.shp/.dbf/.shx`），可作为手动验证基准。
