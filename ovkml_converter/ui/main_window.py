@@ -6,10 +6,13 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ovkml_converter.convert.conversion_service import convert_file
+from ovkml_converter.convert.conversion_service import convert_file, detect_ovkml_crs
 from ovkml_converter.models.geo_objects import CoordType
 
+# 输出（目标）坐标系候选：首项"与输入坐标系一致"为默认，表示不转换
 CRS_LABELS = ["与输入坐标系一致", "WGS84", "CGCS2000", "GCJ02", "BD09"]
+# 输入（原）坐标系候选：均为具体坐标系，无"一致"项
+INPUT_CRS_LABELS = ["CGCS2000", "WGS84", "GCJ02", "BD09"]
 _LABEL_TO_CRS = {
     "与输入坐标系一致": CoordType.UNKNOWN,
     "WGS84": CoordType.WGS84,
@@ -21,6 +24,11 @@ _LABEL_TO_CRS = {
 
 def label_to_crs(label: str) -> CoordType:
     return _LABEL_TO_CRS.get(label, CoordType.UNKNOWN)
+
+
+def crs_to_label(crs: CoordType) -> str:
+    """把具体坐标系映射回输入下拉的标签；非具体值回落 CGCS2000。"""
+    return crs.value if crs.value in INPUT_CRS_LABELS else "CGCS2000"
 
 
 class MainWindow:
@@ -65,16 +73,26 @@ class MainWindow:
         crs_frame = ttk.LabelFrame(self.root, text="坐标系")
         crs_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        ttk.Label(crs_frame, text="目标坐标系:").pack(side=tk.LEFT, padx=(10, 2))
+        crs_row = ttk.Frame(crs_frame)
+        crs_row.pack(fill=tk.X, padx=5, pady=(4, 0))
+
+        # 输入（原）坐标系——放左侧；OVKML 自动检测回填，OVOBJ 手动设置
+        ttk.Label(crs_row, text="输入坐标系:").pack(side=tk.LEFT, padx=(5, 2))
+        self.input_crs_var = tk.StringVar(value="CGCS2000")
+        ttk.Combobox(crs_row, textvariable=self.input_crs_var,
+                     values=INPUT_CRS_LABELS, state="readonly", width=12).pack(side=tk.LEFT, padx=2)
+
+        # 输出（目标）坐标系——放右侧；默认"与输入坐标系一致"
+        ttk.Label(crs_row, text="输出坐标系:").pack(side=tk.LEFT, padx=(24, 2))
         self.target_crs_var = tk.StringVar(value=CRS_LABELS[0])
-        ttk.Combobox(crs_frame, textvariable=self.target_crs_var,
+        ttk.Combobox(crs_row, textvariable=self.target_crs_var,
                      values=CRS_LABELS, state="readonly", width=16).pack(side=tk.LEFT, padx=2)
 
-        ttk.Label(crs_frame, text="OVOBJ源坐标系:").pack(side=tk.LEFT, padx=(20, 2))
-        self.ovobj_src_var = tk.StringVar(value="CGCS2000")
-        ttk.Combobox(crs_frame, textvariable=self.ovobj_src_var,
-                     values=["CGCS2000", "WGS84", "GCJ02", "BD09"],
-                     state="readonly", width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Label(crs_frame,
+                  text="提示：输出坐标系默认与输入保持一致；如需纠偏可自行选择目标坐标系。"
+                       "OVKML 会自动识别输入坐标系，OVOBJ 请手动设置输入坐标系。",
+                  foreground="gray", wraplength=600, justify=tk.LEFT).pack(
+            fill=tk.X, padx=8, pady=(2, 4))
 
         dir_frame = ttk.Frame(self.root)
         dir_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -102,20 +120,35 @@ class MainWindow:
             title="选择文件",
             filetypes=[("奥维文件", "*.ovkml *.ovobj"), ("所有文件", "*.*")]
         )
+        added = []
         for f in files:
             if f not in self.files:
                 self.files.append(f)
                 self.file_listbox.insert(tk.END, f)
+                added.append(f)
+        self._auto_detect_input_crs(added)
 
     def add_folder(self):
         folder = filedialog.askdirectory(title="选择文件夹")
         if folder:
+            added = []
             for ext in ("*.ovkml", "*.ovobj"):
                 for f in Path(folder).glob(ext):
                     fp = str(f)
                     if fp not in self.files:
                         self.files.append(fp)
                         self.file_listbox.insert(tk.END, fp)
+                        added.append(fp)
+            self._auto_detect_input_crs(added)
+
+    def _auto_detect_input_crs(self, added_files):
+        """新增文件中若有 OVKML，自动把"输入坐标系"下拉设为其检测到的坐标系。"""
+        for f in added_files:
+            crs = detect_ovkml_crs(f)
+            if crs is not None:
+                self.input_crs_var.set(crs_to_label(crs))
+                self.status_var.set(f"已自动识别输入坐标系: {crs.value}（来自 {Path(f).name}）")
+                return
 
     def clear_files(self):
         self.files.clear()
@@ -143,7 +176,7 @@ class MainWindow:
         self.progress["value"] = 0
 
         target_crs = label_to_crs(self.target_crs_var.get())
-        ovobj_src = label_to_crs(self.ovobj_src_var.get())
+        ovobj_src = label_to_crs(self.input_crs_var.get())
         thread = threading.Thread(
             target=self._do_convert,
             args=(list(self.files), self.output_format.get(), output_dir, target_crs, ovobj_src),
