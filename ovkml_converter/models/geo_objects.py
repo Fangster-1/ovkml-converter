@@ -7,6 +7,7 @@ class CoordType(Enum):
     WGS84 = "WGS84"
     GCJ02 = "GCJ02"
     CGCS2000 = "CGCS2000"
+    BD09 = "BD09"
     UNKNOWN = "UNKNOWN"
 
 
