@@ -19,12 +19,12 @@ class OvobjParser:
         doc_name = Path(filepath).stem
         coord_type = CoordType.CGCS2000
 
-        all_objects = self._extract_all_objects(data)
+        objs_with_pos = self._extract_all_objects(data)
 
-        folders = self._group_into_folders(data, all_objects)
+        folders = self._assign_to_folders(data, objs_with_pos, doc_name)
 
-        if not folders and all_objects:
-            folders = [GeoFolder(name=doc_name, objects=all_objects)]
+        if not folders and objs_with_pos:
+            folders = [GeoFolder(name=doc_name, objects=[o for o, _ in objs_with_pos])]
 
         return GeoDocument(
             name=doc_name,
@@ -32,13 +32,14 @@ class OvobjParser:
             coord_type=coord_type
         )
 
-    def _extract_all_objects(self, data: bytes) -> List[GeoObject]:
+    def _extract_all_objects(self, data: bytes):
         objects = []
         i = 0
         while i < len(data) - 32:
+            start = i
             obj, new_pos = self._try_parse_object(data, i)
             if obj:
-                objects.append(obj)
+                objects.append((obj, start))
                 i = new_pos
             else:
                 i += 1
@@ -122,24 +123,27 @@ class OvobjParser:
 
         return pos
 
-    def _group_into_folders(self, data: bytes, objects: List[GeoObject]) -> List[GeoFolder]:
-        folder_names = self._find_folder_names(data)
-        if not folder_names:
-            return []
+    def _assign_to_folders(self, data: bytes, objs_with_pos, default_name: str):
+        marks = sorted(self._find_folder_names(data), key=lambda m: m[1])
 
         folders = []
-        obj_idx = 0
-        objs_per_folder = len(objects) // len(folder_names) if folder_names else len(objects)
+        name_to_folder = {}
 
-        for folder_name, _ in folder_names:
-            end_idx = min(obj_idx + objs_per_folder, len(objects))
-            if obj_idx < len(objects):
-                folder_objects = objects[obj_idx:end_idx]
-                folders.append(GeoFolder(name=folder_name, objects=folder_objects))
-                obj_idx = end_idx
+        def folder_for(name: str) -> GeoFolder:
+            if name not in name_to_folder:
+                f = GeoFolder(name=name, objects=[])
+                name_to_folder[name] = f
+                folders.append(f)
+            return name_to_folder[name]
 
-        if obj_idx < len(objects) and folders:
-            folders[-1].objects.extend(objects[obj_idx:])
+        for obj, pos in objs_with_pos:
+            fname = default_name
+            for name, fpos in marks:
+                if fpos <= pos:
+                    fname = name
+                else:
+                    break
+            folder_for(fname).objects.append(obj)
 
         return folders
 
