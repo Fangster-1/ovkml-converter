@@ -35,8 +35,8 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("奥维数据格式转换工具")
-        self.root.geometry("650x520")
-        self.root.minsize(600, 480)
+        self.root.geometry("660x660")
+        self.root.minsize(620, 600)
 
         self.files = []
         self.worker = None
@@ -102,25 +102,27 @@ class MainWindow:
         ttk.Entry(dir_frame, textvariable=self.output_dir_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         ttk.Button(dir_frame, text="浏览...", command=self.browse_output).pack(side=tk.LEFT)
 
-        self.progress = ttk.Progressbar(self.root, mode='determinate')
-        self.progress.pack(fill=tk.X, padx=10, pady=5)
-
-        self.status_var = tk.StringVar(value="就绪")
-        ttk.Label(self.root, textvariable=self.status_var).pack(fill=tk.X, padx=10)
-
-        btn_frame = ttk.Frame(self.root)
-        btn_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        ttk.Button(btn_frame, text="退出", command=self.root.quit).pack(side=tk.RIGHT, padx=5)
-        self.convert_btn = ttk.Button(btn_frame, text="开始转换", command=self.start_convert)
-        self.convert_btn.pack(side=tk.RIGHT, padx=5)
-
-        ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10)
+        # 以下控件用 side=BOTTOM 逆序钉在窗口底部，确保无论窗口高度如何，
+        # "开始转换"按钮与署名始终可见（中间的文件列表会自动让出空间）。
         author_label = tk.Label(
             self.root,
             text="作者：方庆坪    联系方式（微信同号）：19988312343",
             font=("楷体", 10))
-        author_label.pack(fill=tk.X, padx=10, pady=(2, 6))
+        author_label.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(2, 6))
+
+        ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(side=tk.BOTTOM, fill=tk.X, padx=10)
+
+        btn_frame = ttk.Frame(self.root)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        ttk.Button(btn_frame, text="退出", command=self.root.quit).pack(side=tk.RIGHT, padx=5)
+        self.convert_btn = ttk.Button(btn_frame, text="开始转换", command=self.start_convert)
+        self.convert_btn.pack(side=tk.RIGHT, padx=5)
+
+        self.status_var = tk.StringVar(value="就绪")
+        ttk.Label(self.root, textvariable=self.status_var).pack(side=tk.BOTTOM, fill=tk.X, padx=10)
+
+        self.progress = ttk.Progressbar(self.root, mode='determinate')
+        self.progress.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
     def add_files(self):
         files = filedialog.askopenfilenames(
