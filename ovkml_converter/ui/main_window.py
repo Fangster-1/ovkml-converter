@@ -115,6 +115,13 @@ class MainWindow:
         self.convert_btn = ttk.Button(btn_frame, text="开始转换", command=self.start_convert)
         self.convert_btn.pack(side=tk.RIGHT, padx=5)
 
+        ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=10)
+        author_label = tk.Label(
+            self.root,
+            text="作者：方庆坪    联系方式（微信同号）：19988312343",
+            font=("楷体", 10))
+        author_label.pack(fill=tk.X, padx=10, pady=(2, 6))
+
     def add_files(self):
         files = filedialog.askopenfilenames(
             title="选择文件",
