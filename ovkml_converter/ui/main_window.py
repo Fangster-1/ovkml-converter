@@ -107,8 +107,8 @@ class MainWindow:
         author_label = tk.Label(
             self.root,
             text="作者：方庆坪    联系方式（微信同号）：19988312343",
-            font=("楷体", 10))
-        author_label.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(2, 6))
+            font=("楷体", 10), anchor=tk.E)
+        author_label.pack(side=tk.BOTTOM, fill=tk.X, padx=(10, 16), pady=(2, 6))
 
         ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(side=tk.BOTTOM, fill=tk.X, padx=10)
 
