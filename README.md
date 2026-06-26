@@ -1,6 +1,6 @@
 # 奥维数据格式转换工具
 
-将奥维地图的 `.ovkml` 和 `.ovobj` 格式批量转换为标准 KML、Shapefile、DXF 格式。
+将奥维地图的 `.ovkml` 和 `.ovobj` 格式批量转换为标准 KML、Shapefile、DXF 格式。项目还在持续测试中，欢迎交流学习
 
 ## 功能
 
