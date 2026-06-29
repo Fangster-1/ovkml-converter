@@ -1,14 +1,18 @@
 # 奥维数据格式转换工具
 
-将奥维地图的 `.ovkml` 和 `.ovobj` 格式批量转换为标准 KML、Shapefile、DXF 格式。项目还在持续测试中，欢迎交流学习
+将奥维地图的 `.ovkml` / `.ovkmz` / `.ovjsn` / `.ovobj` 格式批量转换为标准 KML、Shapefile、DXF 格式。项目还在持续测试中，欢迎交流学习
 
 ## 功能
 
-- 支持 `.ovkml`（XML）和 `.ovobj`（二进制）两种奥维专有格式
+- 支持四种奥维输入格式：
+  - `.ovkml`（XML）—— 点 / 线 / 面，完整支持
+  - `.ovkmz`（OVKML 的 ZIP 压缩包）—— 解压后等同 OVKML，完整支持
+  - `.ovjsn`（JSON）—— 点 / 线 / 面，完整支持
+  - `.ovobj`（私有二进制）—— **仅支持点对象**；线 / 面坐标为非标准编码无法可靠解析，请改用同名的 OVKML/OVKMZ/OVJSN
 - 输出为标准 KML、Shapefile（SHP）、DXF（CAD）
 - 支持多文件和整文件夹批量转换
 - 坐标系转换：WGS84 / CGCS2000 / GCJ02 / BD09 互转
-- OVKML 自动识别输入坐标系
+- OVKML / OVKMZ / OVJSN 自动识别输入坐标系（OVOBJ 需手动指定或借同名文件兜底）
 - Tkinter 图形界面，操作简单
 
 ## 安装
@@ -27,9 +31,9 @@ python main.py
 
 启动图形界面后：
 
-1. 点击「添加文件」或「添加文件夹」导入 `.ovkml` / `.ovobj` 文件
+1. 点击「添加文件」或「添加文件夹」导入 `.ovkml` / `.ovkmz` / `.ovjsn` / `.ovobj` 文件
 2. 选择输出格式（KML / SHP / DXF / 全部）
-3. 设置输入坐标系（OVKML 会自动识别，OVOBJ 需手动选择）
+3. 设置输入坐标系（OVKML/OVKMZ/OVJSN 会自动识别，OVOBJ 需手动选择）
 4. 如需坐标纠偏，选择目标坐标系；默认「与输入坐标系一致」不做转换
 5. 选择输出目录，点击「开始转换」
 
@@ -56,8 +60,9 @@ python -m pytest tests/ -v
 └── ovkml_converter/
     ├── models/geo_objects.py        # 中间数据模型（GeoDocument/GeoObject 等）
     ├── parsers/
-    │   ├── ovkml_parser.py          # OVKML 解析器
-    │   └── ovobj_parser.py          # OVOBJ 二进制解析器
+    │   ├── ovkml_parser.py          # OVKML 解析器（OVKMZ 解压后复用）
+    │   ├── ovjsn_parser.py          # OVJSN（JSON）解析器
+    │   └── ovobj_parser.py          # OVOBJ 二进制解析器（仅点对象）
     ├── transforms/
     │   └── coordinate_transform.py  # 坐标系转换（WGS84/GCJ02/BD09 互转）
     ├── writers/
@@ -73,7 +78,7 @@ python -m pytest tests/ -v
 ## 数据流
 
 ```
-.ovkml / .ovobj  →  Parser  →  GeoDocument  →  坐标转换  →  Writer  →  .kml / .shp / .dxf
+.ovkml / .ovkmz / .ovjsn / .ovobj  →  Parser  →  GeoDocument  →  坐标转换  →  Writer  →  .kml / .shp / .dxf
 ```
 
 所有格式先解析为统一的 `GeoDocument` 中间模型，再由写入器输出为目标格式。新增输入或输出格式只需对接该模型。
@@ -114,37 +119,36 @@ OVKML 特有元素：
 - `<OvCoordType>` — 坐标系类型（CGCS2000 / GCJ02 / WGS84）
 - 坐标顺序：`经度,纬度,高程`（与标准 KML 一致）
 
+### OVKMZ 格式
+
+OVKMZ 是 **OVKML 的 ZIP 压缩包**（与 `KMZ = 压缩的 KML` 同理），内部包含一个 `doc.kml`（即 OVKML 内容）。工具解压后复用 OVKML 解析器，因此点 / 线 / 面均完整支持，与 OVKML 等价。
+
+### OVJSN 格式
+
+OVJSN 是奥维的 JSON 导出格式，结构如下（实测自奥维 V10.6.2）：
+
+```json
+{"Version":"V10.6.2","Type":1,"ObjItems":[
+  {"Type":7,"Object":{"Name":"","Comment":"","ObjectDetail":{
+      "Lat":29.6755252,"Lng":100.2723026,"Gcj02":0 }}}
+]}
+```
+
+要点：
+- `ObjItems[].Object.Type`：`7` = 点，`8` = 线，`13` = 面
+- 点对象坐标在 `ObjectDetail.Lat` / `Lng`；线 / 面坐标在 `ObjectDetail.Latlng`（扁平的 `纬,经,纬,经,…` 数组）
+- `ObjectDetail.Gcj02`：顶层坐标系标志，`1` = GCJ02，`0` = CGCS2000（注意：嵌套的 `Obj3dView.Gcj02` 与坐标系无关，不可使用）
+- `Object.Name` / `Object.Comment` 对应名称 / 描述
+- 文件常带 UTF-8 BOM，需以 `utf-8-sig` 读取
+
 ### OVOBJ 格式
 
-OVOBJ 是二进制格式，结构如下：
+OVOBJ 是奥维私有二进制格式（Magic `OviO`），**布局随版本变化且无公开文档**。实测：
 
-```
-文件头:
-  [0x00-0x04] Magic: "OviO" (4 bytes)
-  [0x04-0x0C] 保留 (8 bytes, 全零)
-  [0x0C-0x10] 对象总数 (4 bytes, big-endian int)
-  [0x10-0xF0] 保留 (大量零填充)
+- 点对象坐标以 小端 double 的 `(纬度, 经度)` 成对出现，可被定位；
+- 线 / 面对象坐标采用**非标准编码**（常规 double/float/缩放整数均无法还原），无法可靠解析。
 
-文件夹记录 (重复):
-  [0xF0-0xF4] 文件夹名称长度 N (4 bytes, big-endian int)
-  [0xF4-0xF4+N] 文件夹名称 (UTF-8 字符串)
-
-对象记录 (重复):
-  [coord+0]  纬度 (8 bytes, little-endian double)
-  [coord+8]  经度 (8 bytes, little-endian double)
-  [coord+16] 填充 (4 bytes, big-endian int, 通常为 0)
-  [coord+20] 对象类型 (4 bytes, big-endian int, 4=点)
-  [coord+24] 标志位 (4 bytes, big-endian int, 1=有名称)
-  [coord+28] 名称长度 N (4 bytes, big-endian int)
-  [coord+32] 名称 (N bytes, UTF-8 字符串)
-  [coord+32+N] 属性数据 (变长)
-```
-
-关键特征：
-- 坐标存储顺序：`纬度, 经度`（与 KML 相反）
-- 整数使用 big-endian 字节序，浮点数使用 little-endian 字节序
-- 对象类型码：4 = 点，2 = 线，3 = 面
-- OVOBJ 不存储坐标系信息，需通过同名 `.ovkml` 文件或手动指定
+因此工具对 OVOBJ **只做点对象的尽力提取**（扫描中国经纬度范围内的成对坐标 double），名称 / 分组无法从二进制可靠还原。**线 / 面数据请改用同名的 OVKML / OVKMZ / OVJSN 文件**——它们承载同一份数据且可完整、可靠地转换。OVOBJ 不含坐标系信息，需通过同名文本格式兜底或手动指定。
 
 ### 坐标系
 
