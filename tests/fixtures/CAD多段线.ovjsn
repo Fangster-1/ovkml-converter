@@ -1,0 +1,12 @@
+﻿{"Version":"V10.6.2","Type":1,"ObjItems":[
+        {"Type":8,"ObjID":689628265,"ParentID":1,"tmModify":"2026/06/25 16:09:44","Object":
+            {"Name":"CAD多段线","Type":8,"Comment":"","ObjectDetail":
+                {"Gcj02":0,"Obj3dView":
+                    {"ViewLng":0.00000000,"ViewLat":0.00000000,"RotateX":0.00000000,"RotateZ":0.00000000,"EyeToView":0,"Alt":0,"AltType":0,"ToGround":0,"Order":0,"LineWid":0,"AltFloat":0,"RelateModel":0,"LineClr":0,"Gcj02":1},
+                        "OverlayIdx":0,"TrackType":0,"ShowLevel":1,"ShowLevelMax":0,"AltitudeColor":0,"ShowName":0,"Edit":1,"TrackDraw":
+                    {"LineClr":65535,"LineWidth":3,"CadLineShowWid":0,"LineAlpha":100,"ShowType":5,"LineType":0,"CircleClr":32768,"CircleWidth":5,"SplineDegree":0,"LineTypeCustom":0,"LineTypeScale":0.00000000,"NeedDrawDetail":0,"Close":0
+                    },"Mtp":5,"Latlng":[29.64382651,100.28826714,29.63882839,100.30860901,29.65926688,100.31092644,29.67873180,100.30972481,29.68238572,100.29908180]
+                }
+            }
+        }]
+}

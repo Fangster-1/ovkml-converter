@@ -1,0 +1,10 @@
+﻿{"Version":"V10.6.2","Type":1,"ObjItems":[
+        {"Type":13,"ObjID":1152766104,"ParentID":1,"tmModify":"2026/06/25 16:08:45","Object":
+            {"Name":"多边形","Type":13,"Comment":"","ObjectDetail":
+                {"Gcj02":0,"Obj3dView":
+                    {"ViewLng":0.00000000,"ViewLat":0.00000000,"RotateX":0.00000000,"RotateZ":0.00000000,"EyeToView":0,"Alt":0,"AltType":0,"ToGround":0,"Order":0,"LineWid":0,"AltFloat":0,"RelateModel":0,"LineClr":0,"Gcj02":0},
+                        "OverlayIdx":0,"ShowLevel":1,"ShowLevelMax":0,"OuterRgnIdx":0,"EditMode":1,"ShowFlag":0,"LineClr":65535,"LineWidth":1,"CadLineShowWid":0,"LineAlpha":50,"AreaClr":65535,"AreaAlpha":50,"StartAngle":180.00000000,"EndAngle":180.00000000,"FillType":0,"FillSubType":0,"FillPattern":0,"FillChgClr":0,"FillRotate":0.00000000,"FillScale":0.00000000,"FillOffsetX":0.00000000,"FillOffsetY":0.00000000,"Mtp":4,"Latlng":[29.63935060,100.35976410,29.62017652,100.36525726,29.62965210,100.38396835,29.64099179,100.37092209]
+                }
+            }
+        }]
+}

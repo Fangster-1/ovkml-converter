@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ovkml_converter.convert.conversion_service import convert_file, detect_ovkml_crs
+from ovkml_converter.convert.conversion_service import convert_file, detect_input_crs
 from ovkml_converter.models.geo_objects import CoordType
 
 # 输出（目标）坐标系候选：首项"与输入坐标系一致"为默认，表示不转换
@@ -90,7 +90,7 @@ class MainWindow:
 
         ttk.Label(crs_frame,
                   text="提示：输出坐标系默认与输入保持一致；如需纠偏可自行选择目标坐标系。"
-                       "OVKML 会自动识别输入坐标系，OVOBJ 请手动设置输入坐标系。",
+                       "OVKML/OVKMZ/OVJSN 会自动识别输入坐标系，OVOBJ 请手动设置输入坐标系。",
                   foreground="gray", wraplength=600, justify=tk.LEFT).pack(
             fill=tk.X, padx=8, pady=(2, 4))
 
@@ -127,7 +127,7 @@ class MainWindow:
     def add_files(self):
         files = filedialog.askopenfilenames(
             title="选择文件",
-            filetypes=[("奥维文件", "*.ovkml *.ovobj"), ("所有文件", "*.*")]
+            filetypes=[("奥维文件", "*.ovkml *.ovkmz *.ovjsn *.ovobj"), ("所有文件", "*.*")]
         )
         added = []
         for f in files:
@@ -141,7 +141,7 @@ class MainWindow:
         folder = filedialog.askdirectory(title="选择文件夹")
         if folder:
             added = []
-            for ext in ("*.ovkml", "*.ovobj"):
+            for ext in ("*.ovkml", "*.ovkmz", "*.ovjsn", "*.ovobj"):
                 for f in Path(folder).glob(ext):
                     fp = str(f)
                     if fp not in self.files:
@@ -151,9 +151,9 @@ class MainWindow:
             self._auto_detect_input_crs(added)
 
     def _auto_detect_input_crs(self, added_files):
-        """新增文件中若有 OVKML，自动把"输入坐标系"下拉设为其检测到的坐标系。"""
+        """新增文件中若有自带坐标系的格式（OVKML/OVKMZ/OVJSN），自动回填"输入坐标系"。"""
         for f in added_files:
-            crs = detect_ovkml_crs(f)
+            crs = detect_input_crs(f)
             if crs is not None:
                 self.input_crs_var.set(crs_to_label(crs))
                 self.status_var.set(f"已自动识别输入坐标系: {crs.value}（来自 {Path(f).name}）")

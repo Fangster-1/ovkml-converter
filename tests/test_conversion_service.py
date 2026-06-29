@@ -1,30 +1,38 @@
+import shutil
 from pathlib import Path
-from ovkml_converter.convert.conversion_service import resolve_source_crs, convert_file
-from ovkml_converter.parsers.ovobj_parser import OvobjParser
+from ovkml_converter.convert.conversion_service import (
+    resolve_source_crs, convert_file, parse_input,
+)
 from ovkml_converter.models.geo_objects import CoordType
 
-OVOBJ = "奥维格式数据/姚安县验证.ovobj"
-OVKML = "奥维格式数据/姚安县验证B线.ovkml"
+FIX = Path(__file__).parent / "fixtures"
+OVOBJ = str(FIX / "测试点.ovobj")
+OVKML = str(FIX / "测试点.ovkml")
 
 
-def test_resolve_ovkml_uses_detected():
-    from ovkml_converter.parsers.ovkml_parser import OvkmlParser
-    doc = OvkmlParser().parse(OVKML)
+def test_resolve_text_format_uses_detected():
+    doc = parse_input(OVKML)
     crs = resolve_source_crs(OVKML, doc, CoordType.WGS84, None)
     assert crs == CoordType.CGCS2000
 
 
-def test_resolve_ovobj_uses_default_without_sibling():
-    doc = OvobjParser().parse(OVOBJ)
-    crs = resolve_source_crs(OVOBJ, doc, CoordType.WGS84, None)
+def test_resolve_ovobj_uses_default_without_sibling(tmp_path):
+    # 把 ovobj 单独拷到无同名文本格式的目录，确认回落到手动默认值
+    lone = tmp_path / "孤立点.ovobj"
+    shutil.copy(OVOBJ, lone)
+    doc = parse_input(str(lone))
+    crs = resolve_source_crs(str(lone), doc, CoordType.WGS84, None)
     assert crs == CoordType.WGS84
 
 
-def test_resolve_ovobj_sibling_fallback():
-    doc = OvobjParser().parse(OVOBJ)
-    sibling = "奥维格式数据/姚安县验证.ovkml"
-    crs = resolve_source_crs(OVOBJ, doc, CoordType.WGS84, [OVOBJ, sibling])
-    assert crs in (CoordType.CGCS2000, CoordType.WGS84)
+def test_resolve_ovobj_sibling_fallback(tmp_path):
+    # 同目录存在同名 ovkml 时，自动借用其坐标系
+    shutil.copy(OVOBJ, tmp_path / "测试点.ovobj")
+    shutil.copy(OVKML, tmp_path / "测试点.ovkml")
+    target = str(tmp_path / "测试点.ovobj")
+    doc = parse_input(target)
+    crs = resolve_source_crs(target, doc, CoordType.WGS84, None)
+    assert crs == CoordType.CGCS2000
 
 
 def test_convert_file_keep_as_is_writes_kml(tmp_path):
@@ -32,7 +40,7 @@ def test_convert_file_keep_as_is_writes_kml(tmp_path):
                        ["kml"], str(tmp_path))
     assert res["source_crs"] == CoordType.CGCS2000
     assert res["target_crs"] == CoordType.CGCS2000
-    assert (tmp_path / "姚安县验证B线.kml").exists()
+    assert (tmp_path / "测试点.kml").exists()
 
 
 def test_convert_file_cgcs2000_to_wgs84_relabels(tmp_path):

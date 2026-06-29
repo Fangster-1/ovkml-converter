@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" 
+	xmlns:atom="http://www.w3.org/2005/Atom" 
+	xmlns:gx="http://www.google.com/kml/ext/2.2" 
+	>
+<Document>
+	<name>CAD多段线</name>
+	<Placemark>
+		<name>CAD多段线</name>
+		<Style>
+			<LineStyle><color>ff00ffff</color><width>1</width></LineStyle>
+		</Style>
+		<OvStyle>
+			<TrackStyle><type>5</type><width>3</width><LineType>0</LineType></TrackStyle>
+		</OvStyle>
+		<OvCoordType>CGCS2000</OvCoordType>
+			<LineString>
+				<coordinates>100.28826714,29.64382651,0 100.30860901,29.63882839,0 100.31092644,29.65926688,0 100.30972481,29.67873180,0 100.29908180,29.68238572,0 </coordinates>
+			</LineString>
+	</Placemark>
+</Document>
+</kml>

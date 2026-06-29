@@ -11,9 +11,14 @@ KML_NS = '{http://www.opengis.net/kml/2.2}'
 class OvkmlParser:
     def parse(self, filepath: str) -> GeoDocument:
         tree = ET.parse(filepath)
-        root = tree.getroot()
+        return self._parse_root(tree.getroot(), Path(filepath).stem)
 
-        doc_name = Path(filepath).stem
+    def parse_string(self, xml, doc_name: str) -> GeoDocument:
+        """从 KML/OVKML 文本（str 或 bytes）解析；供 OVKMZ 解压后复用。"""
+        root = ET.fromstring(xml)
+        return self._parse_root(root, doc_name)
+
+    def _parse_root(self, root, doc_name: str) -> GeoDocument:
         coord_type = CoordType.UNKNOWN
         folders = []
 

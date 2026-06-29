@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" 
+	xmlns:atom="http://www.w3.org/2005/Atom" 
+	xmlns:gx="http://www.google.com/kml/ext/2.2" 
+	>
+<Document>
+	<name>多边形</name>
+	<Placemark>
+		<name>多边形</name>
+		<Style>
+			<LineStyle><color>7f00ffff</color><width>1</width></LineStyle>
+			<PolyStyle><color>7f00ffff</color></PolyStyle>
+		</Style>
+		<OvCoordType>CGCS2000</OvCoordType>
+			<Polygon>
+				<tessellate>1</tessellate>
+				<outerBoundaryIs>
+					<LinearRing>
+						<coordinates>100.35976410,29.63935060,0 100.36525726,29.62017652,0 100.38396835,29.62965210,0 100.37092209,29.64099179,0 100.35976410,29.63935060,0 </coordinates>
+					</LinearRing>
+				</outerBoundaryIs>
+			</Polygon>
+	</Placemark>
+</Document>
+</kml>

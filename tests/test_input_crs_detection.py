@@ -1,18 +1,29 @@
-from ovkml_converter.convert.conversion_service import detect_ovkml_crs
+from pathlib import Path
+from ovkml_converter.convert.conversion_service import detect_input_crs
 from ovkml_converter.ui.main_window import crs_to_label, INPUT_CRS_LABELS
 from ovkml_converter.models.geo_objects import CoordType
 
-
-def test_detect_ovkml_crs_returns_detected():
-    assert detect_ovkml_crs("奥维格式数据/姚安县验证B线.ovkml") == CoordType.CGCS2000
+FIX = Path(__file__).parent / "fixtures"
 
 
-def test_detect_ovkml_crs_none_for_ovobj():
-    assert detect_ovkml_crs("奥维格式数据/姚安县验证.ovobj") is None
+def test_detect_crs_ovkml():
+    assert detect_input_crs(str(FIX / "测试点.ovkml")) == CoordType.CGCS2000
 
 
-def test_detect_ovkml_crs_none_for_missing():
-    assert detect_ovkml_crs("不存在的文件.ovkml") is None
+def test_detect_crs_ovkmz():
+    assert detect_input_crs(str(FIX / "测试点.ovkmz")) == CoordType.CGCS2000
+
+
+def test_detect_crs_ovjsn():
+    assert detect_input_crs(str(FIX / "测试点.ovjsn")) == CoordType.CGCS2000
+
+
+def test_detect_crs_none_for_ovobj():
+    assert detect_input_crs(str(FIX / "测试点.ovobj")) is None
+
+
+def test_detect_crs_none_for_missing():
+    assert detect_input_crs("不存在的文件.ovkml") is None
 
 
 def test_crs_to_label_concrete():

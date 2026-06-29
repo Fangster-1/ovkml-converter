@@ -1,52 +1,83 @@
+import zipfile
 from pathlib import Path
 
-from ..parsers import OvkmlParser, OvobjParser
+from ..parsers import OvkmlParser, OvobjParser, OvjsnParser
 from ..writers import KmlWriter, ShpWriter, DxfWriter
 from ..transforms.coordinate_transform import transform_document, out_of_china
 from ..models.geo_objects import CoordType, GeoDocument
 
+# 文本类格式：自带坐标系信息，可自动识别（OVKMZ 解压后即 OVKML）
+_AUTO_CRS_EXTS = (".ovkml", ".ovkmz", ".ovjsn")
+# 全部支持的输入扩展名
+SUPPORTED_EXTS = (".ovkml", ".ovkmz", ".ovjsn", ".ovobj")
+
+
+def _read_ovkmz_kml(filepath) -> bytes:
+    """OVKMZ 是 ZIP 包，内含一个 doc.kml（OVKML 内容）。返回其字节。"""
+    with zipfile.ZipFile(filepath) as z:
+        names = [n for n in z.namelist() if n.lower().endswith((".kml", ".ovkml"))]
+        if not names:
+            raise ValueError("OVKMZ 内未找到 KML 文件")
+        return z.read(names[0])
+
+
+def parse_input(filepath) -> GeoDocument:
+    """按扩展名把任意奥维输入格式解析为统一的 GeoDocument。"""
+    ext = Path(filepath).suffix.lower()
+    stem = Path(filepath).stem
+    if ext == ".ovkml":
+        return OvkmlParser().parse(filepath)
+    if ext == ".ovkmz":
+        return OvkmlParser().parse_string(_read_ovkmz_kml(filepath), stem)
+    if ext == ".ovjsn":
+        return OvjsnParser().parse(filepath)
+    if ext == ".ovobj":
+        return OvobjParser().parse(filepath)
+    raise ValueError(f"不支持的格式: {ext}")
+
 
 def resolve_source_crs(filepath, parsed_doc, ovobj_src_crs, sibling_files):
     ext = Path(filepath).suffix.lower()
-    if ext == ".ovkml":
+    if ext in _AUTO_CRS_EXTS:
         if parsed_doc.coord_type != CoordType.UNKNOWN:
             return parsed_doc.coord_type
         return ovobj_src_crs
+
+    # OVOBJ 不含坐标系：先找同名文本格式兜底，再回落到手动设置
     stem = Path(filepath).stem
     for sf in sibling_files or []:
         sp = Path(sf)
-        if sp.suffix.lower() == ".ovkml" and sp.stem == stem and sp.exists():
-            try:
-                sib = OvkmlParser().parse(str(sp))
-                if sib.coord_type != CoordType.UNKNOWN:
-                    return sib.coord_type
-            except Exception:
-                pass
-    same_dir = Path(filepath).with_suffix(".ovkml")
-    if same_dir.exists():
-        try:
-            sib = OvkmlParser().parse(str(same_dir))
-            if sib.coord_type != CoordType.UNKNOWN:
-                return sib.coord_type
-        except Exception:
-            pass
+        if sp.suffix.lower() in _AUTO_CRS_EXTS and sp.stem == stem and sp.exists():
+            crs = _try_detect(str(sp))
+            if crs is not None:
+                return crs
+    for e in _AUTO_CRS_EXTS:
+        cand = Path(filepath).with_suffix(e)
+        if cand.exists():
+            crs = _try_detect(str(cand))
+            if crs is not None:
+                return crs
     return ovobj_src_crs
 
 
-def detect_ovkml_crs(filepath):
-    """OVKML 文件返回其检测到的坐标系（读 OvCoordType）；OVOBJ 或检测失败返回 None。
-
-    供 UI 在添加文件时自动回填"输入坐标系"下拉用。
-    """
-    if Path(filepath).suffix.lower() != ".ovkml":
-        return None
+def _try_detect(filepath):
     try:
-        doc = OvkmlParser().parse(filepath)
+        doc = parse_input(filepath)
         if doc.coord_type != CoordType.UNKNOWN:
             return doc.coord_type
     except Exception:
         pass
     return None
+
+
+def detect_input_crs(filepath):
+    """文本类格式（OVKML/OVKMZ/OVJSN）返回检测到的坐标系；OVOBJ 或失败返回 None。
+
+    供 UI 在添加文件时自动回填"输入坐标系"下拉用。
+    """
+    if Path(filepath).suffix.lower() not in _AUTO_CRS_EXTS:
+        return None
+    return _try_detect(filepath)
 
 
 def _stamp_source(doc: GeoDocument, src: CoordType, override_all: bool) -> None:
@@ -74,12 +105,12 @@ def _any_in_china(doc: GeoDocument) -> bool:
 
 def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_files=None):
     ext = Path(filepath).suffix.lower()
-    if ext == ".ovkml":
-        doc = OvkmlParser().parse(filepath)
-    elif ext == ".ovobj":
-        doc = OvobjParser().parse(filepath)
-    else:
-        raise ValueError(f"不支持的格式: {ext}")
+    doc = parse_input(filepath)
+
+    if ext == ".ovobj" and doc.get_object_count() == 0:
+        raise ValueError(
+            "OVOBJ 未提取到点对象（线/面或该版本二进制无法解析），"
+            "请改用同名的 OVKML / OVKMZ / OVJSN 文件")
 
     src = resolve_source_crs(filepath, doc, ovobj_src_crs, sibling_files)
     _stamp_source(doc, src, override_all=(ext == ".ovobj"))
@@ -90,6 +121,7 @@ def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_
 
     stem = Path(filepath).stem
     out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
     if "kml" in formats:
         KmlWriter().write(out_doc, str(out / f"{stem}.kml"))
     if "shp" in formats:

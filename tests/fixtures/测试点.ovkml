@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" 
+	xmlns:atom="http://www.w3.org/2005/Atom" 
+	xmlns:gx="http://www.google.com/kml/ext/2.2" 
+	>
+<Document>
+	<name>测试点</name>
+	<Placemark>
+		<name></name>
+		<OvAttr>
+			<OvIcon>4</OvIcon>
+			<OvIconNum>0</OvIconNum>
+		</OvAttr>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+				</Icon>
+				<hotSpot x="0.5" y="0.0" xunits="fraction" yunits="fraction" />
+			</IconStyle>
+		</Style>
+		<OvCoordType>CGCS2000</OvCoordType>
+		<Point>
+			<coordinates>100.27230263,29.67552520,0</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name></name>
+		<OvAttr>
+			<OvIcon>5</OvIcon>
+			<OvIconNum>0</OvIconNum>
+		</OvAttr>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>http://maps.google.com/mapfiles/kml/pushpin/blue-pushpin.png</href>
+				</Icon>
+				<hotSpot x="0.5" y="0.0" xunits="fraction" yunits="fraction" />
+			</IconStyle>
+		</Style>
+		<OvCoordType>CGCS2000</OvCoordType>
+		<Point>
+			<coordinates>100.26749611,29.66948457,0</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name></name>
+		<OvAttr>
+			<OvIcon>6</OvIcon>
+			<OvIconNum>0</OvIconNum>
+		</OvAttr>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>http://maps.google.com/mapfiles/kml/pushpin/grn-pushpin.png</href>
+				</Icon>
+				<hotSpot x="0.5" y="0.0" xunits="fraction" yunits="fraction" />
+			</IconStyle>
+		</Style>
+		<OvCoordType>CGCS2000</OvCoordType>
+		<Point>
+			<coordinates>100.27144432,29.65956523,0</coordinates>
+		</Point>
+	</Placemark>
+</Document>
+</kml>

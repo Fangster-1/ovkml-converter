@@ -1,0 +1,38 @@
+﻿{"Version":"V10.6.2","Type":1,"ObjItems":[
+        {"Type":7,"ObjID":464016062,"ParentID":1,"tmModify":"2026/06/25 16:12:18","Object":
+            {"Name":"","Type":7,"Comment":"","ObjectDetail":
+                {"Lat":29.67552520,"Lng":100.27230263,"Gcj02":0,"Obj3dView":
+                    {"ViewLng":0.00000000,"ViewLat":0.00000000,"RotateX":0.00000000,"RotateZ":0.00000000,"EyeToView":0,"Alt":0,"AltType":0,"ToGround":0,"Order":0,"LineWid":0,"AltFloat":0,"RelateModel":0,"LineClr":0,"Gcj02":1},
+                        "Altitude":0.00000000,"EditMode":0,"OverlayIdx":0,"TxtType":1,"ShowLevel":1,"ShowLevelMax":0,"TimeUncertain":0,"SignEvent":
+                    {"Radius":0,"ShowClr":0
+                    },"Time":"2026/06/25 16:12:21","SignPic":
+                    {"SignPic":4,"AlignFlag":0,"SignClr":0,"PicScale":0,"SignPicNum":0,"SignPicNumOffx":0,"SignPicNumOffy":0,"SignPicNumClr":0,"SignPicNumSize":0
+                    },"TxtShowSta":0,"TxtShowStaSet":0
+            }
+        }
+        }
+        ,{"Type":7,"ObjID":946716514,"ParentID":1,"tmModify":"2026/06/25 16:12:20","Object":
+            {"Name":"","Type":7,"Comment":"","ObjectDetail":
+                {"Lat":29.66948457,"Lng":100.26749611,"Gcj02":0,"Obj3dView":
+                    {"ViewLng":0.00000000,"ViewLat":0.00000000,"RotateX":0.00000000,"RotateZ":0.00000000,"EyeToView":0,"Alt":0,"AltType":0,"ToGround":0,"Order":0,"LineWid":0,"AltFloat":0,"RelateModel":0,"LineClr":0,"Gcj02":1},
+                        "Altitude":0.00000000,"EditMode":0,"OverlayIdx":0,"TxtType":1,"ShowLevel":1,"ShowLevelMax":0,"TimeUncertain":0,"SignEvent":
+                    {"Radius":0,"ShowClr":0
+                    },"Time":"2026/06/25 16:12:23","SignPic":
+                    {"SignPic":5,"AlignFlag":0,"SignClr":0,"PicScale":0,"SignPicNum":0,"SignPicNumOffx":0,"SignPicNumOffy":0,"SignPicNumClr":0,"SignPicNumSize":0
+                    },"TxtShowSta":0,"TxtShowStaSet":0
+            }
+        }
+        }
+        ,{"Type":7,"ObjID":169057719,"ParentID":1,"tmModify":"2026/06/25 16:12:21","Object":
+            {"Name":"","Type":7,"Comment":"","ObjectDetail":
+                {"Lat":29.65956523,"Lng":100.27144432,"Gcj02":0,"Obj3dView":
+                    {"ViewLng":0.00000000,"ViewLat":0.00000000,"RotateX":0.00000000,"RotateZ":0.00000000,"EyeToView":0,"Alt":0,"AltType":0,"ToGround":0,"Order":0,"LineWid":0,"AltFloat":0,"RelateModel":0,"LineClr":0,"Gcj02":1},
+                        "Altitude":0.00000000,"EditMode":0,"OverlayIdx":0,"TxtType":1,"ShowLevel":1,"ShowLevelMax":0,"TimeUncertain":0,"SignEvent":
+                    {"Radius":0,"ShowClr":0
+                    },"Time":"2026/06/25 16:12:24","SignPic":
+                    {"SignPic":6,"AlignFlag":0,"SignClr":0,"PicScale":0,"SignPicNum":0,"SignPicNumOffx":0,"SignPicNumOffy":0,"SignPicNumClr":0,"SignPicNumSize":0
+                    },"TxtShowSta":0,"TxtShowStaSet":0
+            }
+        }
+        }]
+}
