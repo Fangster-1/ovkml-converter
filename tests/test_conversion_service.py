@@ -40,7 +40,7 @@ def test_convert_file_keep_as_is_writes_kml(tmp_path):
                        ["kml"], str(tmp_path))
     assert res["source_crs"] == CoordType.CGCS2000
     assert res["target_crs"] == CoordType.CGCS2000
-    assert (tmp_path / "测试点.kml").exists()
+    assert (tmp_path / "测试点.ovkml.kml").exists()
 
 
 def test_convert_file_cgcs2000_to_wgs84_relabels(tmp_path):

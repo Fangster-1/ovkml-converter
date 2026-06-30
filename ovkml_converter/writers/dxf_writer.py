@@ -43,17 +43,16 @@ class DxfWriter:
                         lines.append(f"40\n0.001\n1\n{obj.name}")
                 elif obj.geo_type == GeoType.LINE and len(obj.coordinates) >= 2:
                     lines.append(f"0\nPOLYLINE\n8\n{layer}\n70\n0\n66\n1")
-                    lines.append("70\n0")
                     for c in obj.coordinates:
-                        lines.append(f"0\nVERTEX\n8\n{layer}\n10\n{c.lon}\n20\n{c.lat}")
+                        lines.append(f"0\nVERTEX\n8\n{layer}\n10\n{c.lon}\n20\n{c.lat}\n30\n{c.alt}")
                     lines.append("0\nSEQEND")
                 elif obj.geo_type == GeoType.POLYGON and len(obj.coordinates) >= 3:
-                    pts = [(c.lon, c.lat) for c in obj.coordinates]
+                    pts = obj.coordinates[:]
                     if pts[0] != pts[-1]:
                         pts.append(pts[0])
                     lines.append(f"0\nPOLYLINE\n8\n{layer}\n70\n1\n66\n1")
-                    for x, y in pts:
-                        lines.append(f"0\nVERTEX\n8\n{layer}\n10\n{x}\n20\n{y}")
+                    for c in pts:
+                        lines.append(f"0\nVERTEX\n8\n{layer}\n10\n{c.lon}\n20\n{c.lat}\n30\n{c.alt}")
                     lines.append("0\nSEQEND")
 
         lines.append("0\nENDSEC")

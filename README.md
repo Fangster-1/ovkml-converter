@@ -10,6 +10,7 @@
   - `.ovjsn`（JSON）—— 点 / 线 / 面，完整支持
   - `.ovobj`（私有二进制）—— **仅支持点对象**；线 / 面坐标为非标准编码无法可靠解析，请改用同名的 OVKML/OVKMZ/OVJSN
 - 输出为标准 KML、Shapefile（SHP）、DXF（CAD）
+- 完整提取空间坐标与**属性表内容**（名称、备注、对象编号 ObjID、修改/创建时间），写入 SHP 的 DBF 字段，在 GIS（QGIS/ArcGIS 等）属性表中正常显示
 - 支持多文件和整文件夹批量转换
 - 坐标系转换：WGS84 / CGCS2000 / GCJ02 / BD09 互转
 - OVKML / OVKMZ / OVJSN 自动识别输入坐标系（OVOBJ 需手动指定或借同名文件兜底）
@@ -43,7 +44,7 @@ python main.py
 build.bat
 ```
 
-使用 PyInstaller 打包为单文件可执行程序，输出到 `dist/` 目录。
+使用 PyInstaller 打包为单文件可执行程序，输出到 `dist/奥维数据格式转换.exe`，双击即可运行，无需安装 Python。
 
 ## 运行测试
 
@@ -129,26 +130,38 @@ OVJSN 是奥维的 JSON 导出格式，结构如下（实测自奥维 V10.6.2）
 
 ```json
 {"Version":"V10.6.2","Type":1,"ObjItems":[
-  {"Type":7,"Object":{"Name":"","Comment":"","ObjectDetail":{
-      "Lat":29.6755252,"Lng":100.2723026,"Gcj02":0 }}}
+  {"Type":7,"ObjID":464016062,"tmModify":"2026/06/25 16:12:18","Object":{
+      "Name":"","Comment":"","ObjectDetail":{
+        "Lat":29.6755252,"Lng":100.2723026,"Altitude":0,"Gcj02":0,
+        "Time":"2026/06/25 16:12:21" }}}
 ]}
 ```
 
 要点：
 - `ObjItems[].Object.Type`：`7` = 点，`8` = 线，`13` = 面
-- 点对象坐标在 `ObjectDetail.Lat` / `Lng`；线 / 面坐标在 `ObjectDetail.Latlng`（扁平的 `纬,经,纬,经,…` 数组）
+- 点对象坐标在 `ObjectDetail.Lat` / `Lng`（高程在 `Altitude`）；线 / 面坐标在 `ObjectDetail.Latlng`（扁平的 `纬,经,纬,经,…` 数组）
 - `ObjectDetail.Gcj02`：顶层坐标系标志，`1` = GCJ02，`0` = CGCS2000（注意：嵌套的 `Obj3dView.Gcj02` 与坐标系无关，不可使用）
 - `Object.Name` / `Object.Comment` 对应名称 / 描述
+- **属性表字段**：`ObjID`（对象编号）、`tmModify`（修改时间）、点的 `Time`（创建时间）会被提取写入输出（详见下方「属性表提取」）。仅取业务字段，不含符号 / 颜色 / 3D 视角等样式
 - 文件常带 UTF-8 BOM，需以 `utf-8-sig` 读取
 
 ### OVOBJ 格式
 
-OVOBJ 是奥维私有二进制格式（Magic `OviO`），**布局随版本变化且无公开文档**。实测：
+OVOBJ 是奥维私有二进制格式（Magic `OviO`），**布局随版本变化且无公开文档**。经逆向实测：
 
-- 点对象坐标以 小端 double 的 `(纬度, 经度)` 成对出现，可被定位；
-- 线 / 面对象坐标采用**非标准编码**（常规 double/float/缩放整数均无法还原），无法可靠解析。
+- 点对象坐标以 小端 double 的 `(纬度, 经度)` 成对出现，可被定位并完整提取；对象名称以 Pascal 串（长度前缀 + UTF-8）存储，可尽力还原；
+- 线 / 面对象坐标采用**私有压缩编码**：首点为 小端 `int64 × 1e8` 的 `(纬, 经)`，后续点为 zigzag 大端变长 delta。其帧长与轴序无法从现有样本可靠还原，**强行解码会静默产出错误坐标**，故不予解析。
 
-因此工具对 OVOBJ **只做点对象的尽力提取**（扫描中国经纬度范围内的成对坐标 double），名称 / 分组无法从二进制可靠还原。**线 / 面数据请改用同名的 OVKML / OVKMZ / OVJSN 文件**——它们承载同一份数据且可完整、可靠地转换。OVOBJ 不含坐标系信息，需通过同名文本格式兜底或手动指定。
+因此工具对 OVOBJ **只支持点对象**。**线 / 面数据请改用同名的 OVKML / OVKMZ / OVJSN 文件**——它们承载同一份数据且可完整、可靠地转换；导入线 / 面 OVOBJ 时程序会明确提示无法转换。OVOBJ 不含坐标系信息，需通过同名文本格式兜底或手动指定。
+
+### 属性表提取
+
+工具会把奥维记录的**属性表内容**（非样式字段）一并提取，写入输出文件，使其在 GIS / CAD 软件的属性表中正常显示：
+
+- **来源**：OVJSN 最丰富（`ObjID` / `tmModify` / 点的 `Time`）；OVKML / OVKMZ 含名称、描述等；OVOBJ 仅名称
+- **SHP**：DBF 在固定列 `NAME` / `DESC` / `FOLDER` 之外，按对象属性动态追加字段（字段名按 DBF 规则裁剪到 ≤10 字符并去重），如 `OBJID` / `TMMODIFY` / `TIME`，在 QGIS / ArcGIS 属性表中可见
+- **KML**：以 `<OvAttr>` 扩展元素写出
+- 若需要最完整的属性，建议优先使用 **OVJSN** 格式
 
 ### 坐标系
 
@@ -195,6 +208,3 @@ OVOBJ 是奥维私有二进制格式（Magic `OviO`），**布局随版本变化
 - 源或目标为 UNKNOWN 时不转换，直接返回原值
 - `transform_document(doc, target)` 遍历文档中所有点执行批量转换，每个对象可独立持有坐标系信息
 - 境外点（中国经纬度范围外）跳过所有偏移，保持原始坐标
-
-
-

@@ -109,8 +109,8 @@ def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_
 
     if ext == ".ovobj" and doc.get_object_count() == 0:
         raise ValueError(
-            "OVOBJ 未提取到点对象（线/面或该版本二进制无法解析），"
-            "请改用同名的 OVKML / OVKMZ / OVJSN 文件")
+            "OVOBJ 仅支持点对象；线/面坐标为奥维私有压缩编码无法可靠还原。"
+            "请改用同名的 OVKML / OVKMZ / OVJSN 文件转换线/面数据")
 
     src = resolve_source_crs(filepath, doc, ovobj_src_crs, sibling_files)
     _stamp_source(doc, src, override_all=(ext == ".ovobj"))
@@ -119,15 +119,18 @@ def convert_file(filepath, target_crs, ovobj_src_crs, formats, out_dir, sibling_
     out_doc = transform_document(doc, target_crs)
     effective_target = src if target_crs == CoordType.UNKNOWN else target_crs
 
-    stem = Path(filepath).stem
+    # 输出名带源扩展名后缀（如 测试点.ovkml.kml），避免同一份数据的多种格式
+    # （.ovkml/.ovkmz/.ovjsn/.ovobj）输出同名文件互相覆盖。
+    suffix = Path(filepath).suffix          # 含点，如 ".ovkml"
+    base = Path(filepath).stem + suffix     # 如 "测试点.ovkml"
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     if "kml" in formats:
-        KmlWriter().write(out_doc, str(out / f"{stem}.kml"))
+        KmlWriter().write(out_doc, str(out / f"{base}.kml"))
     if "shp" in formats:
-        ShpWriter().write(out_doc, str(out / f"{stem}.shp"))
+        ShpWriter().write(out_doc, str(out / f"{base}.shp"))
     if "dxf" in formats:
-        DxfWriter().write(out_doc, str(out / f"{stem}.dxf"))
+        DxfWriter().write(out_doc, str(out / f"{base}.dxf"))
 
     needs_offset = (target_crs != CoordType.UNKNOWN
                     and _crs_class(src) != _crs_class(effective_target))

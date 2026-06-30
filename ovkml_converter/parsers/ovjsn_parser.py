@@ -58,15 +58,34 @@ class OvjsnParser:
 
         return GeoObject(
             name=name, description=comment, geo_type=geo_type,
-            coordinates=coords, coord_type=coord_type
+            coordinates=coords, coord_type=coord_type,
+            attributes=self._extract_attributes(item, detail),
         )
+
+    def _extract_attributes(self, item: dict, detail: dict) -> dict:
+        """提取奥维记录的属性表内容（仅业务字段，不含符号/颜色/3D 视角等样式）。
+
+        - ObjID：对象唯一编号
+        - tmModify：对象最后修改时间（item 级）
+        - Time：点对象的创建/事件时间（detail 级，线/面通常没有）
+        这些字段会被 ShpWriter 写入 DBF，从而在 GIS 属性表中正常显示。
+        """
+        attrs = {}
+        if item.get('ObjID') is not None:
+            attrs['ObjID'] = str(item['ObjID'])
+        if item.get('tmModify'):
+            attrs['tmModify'] = str(item['tmModify'])
+        if detail.get('Time'):
+            attrs['Time'] = str(detail['Time'])
+        return attrs
 
     def _extract_coords(self, geo_type: GeoType, detail: dict) -> List[GeoPoint]:
         if geo_type == GeoType.POINT:
             lat, lon = detail.get('Lat'), detail.get('Lng')
             if lat is None or lon is None:
                 return []
-            return [GeoPoint(lon=lon, lat=lat)]
+            alt = detail.get('Altitude') or 0.0
+            return [GeoPoint(lon=lon, lat=lat, alt=alt)]
 
         # 线/面：Latlng 为扁平的 [纬, 经, 纬, 经, ...]
         flat = detail.get('Latlng') or []

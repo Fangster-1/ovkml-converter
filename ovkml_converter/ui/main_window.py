@@ -103,13 +103,7 @@ class MainWindow:
         ttk.Button(dir_frame, text="浏览...", command=self.browse_output).pack(side=tk.LEFT)
 
         # 以下控件用 side=BOTTOM 逆序钉在窗口底部，确保无论窗口高度如何，
-        # "开始转换"按钮与署名始终可见（中间的文件列表会自动让出空间）。
-        author_label = tk.Label(
-            self.root,
-            text="作者：方庆坪    联系方式（微信同号）：19988312343",
-            font=("楷体", 10), anchor=tk.E)
-        author_label.pack(side=tk.BOTTOM, fill=tk.X, padx=(10, 16), pady=(2, 6))
-
+        # "开始转换"按钮始终可见（中间的文件列表会自动让出空间）。
         ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(side=tk.BOTTOM, fill=tk.X, padx=10)
 
         btn_frame = ttk.Frame(self.root)
@@ -196,6 +190,7 @@ class MainWindow:
         fmt_list = ["kml", "shp", "dxf"] if fmt == "all" else [fmt]
         success = 0
         fail = 0
+        errors = []
         for i, filepath in enumerate(files):
             try:
                 self.root.after(0, lambda v=i, m=f"正在处理: {Path(filepath).name}": self._update_progress(v, m))
@@ -207,18 +202,25 @@ class MainWindow:
                 success += 1
             except Exception as e:
                 fail += 1
+                errors.append(f"{Path(filepath).name}: {e}")
                 self.root.after(0, lambda m=f"错误: {Path(filepath).name} - {e}": self.status_var.set(m))
-        self.root.after(0, lambda: self._finish(success, fail))
+        self.root.after(0, lambda: self._finish(success, fail, errors))
 
     def _update_progress(self, value, msg):
         self.progress["value"] = value
         self.status_var.set(msg)
 
-    def _finish(self, success, fail):
+    def _finish(self, success, fail, errors=None):
         self.convert_btn.config(state=tk.NORMAL)
         self.progress["value"] = self.progress["maximum"]
         self.status_var.set(f"完成: 成功 {success}, 失败 {fail}")
-        messagebox.showinfo("完成", f"转换完成\n成功: {success}\n失败: {fail}")
+        text = f"转换完成\n成功: {success}\n失败: {fail}"
+        if errors:
+            # 逐条列出失败原因（如 OVOBJ 线/面无法解析，提示改用文本格式）
+            text += "\n\n失败详情：\n" + "\n".join(errors)
+            messagebox.showwarning("完成", text)
+        else:
+            messagebox.showinfo("完成", text)
 
     def run(self):
         self.root.mainloop()

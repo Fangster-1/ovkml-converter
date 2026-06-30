@@ -18,6 +18,15 @@ def test_ovobj_point_extracts_three_points():
     assert abs(c.lon - 100.27230263) < 1e-6
 
 
+def test_ovobj_point_extracts_icon_attributes():
+    """图标 ID 存于坐标 lat double 后偏移 +20 处的小端 int32，应被提取为 OvAttr。"""
+    doc = OvobjParser().parse(str(FIX / "测试点.ovobj"))
+    objs = doc.get_all_objects()
+    assert len(objs) == 3
+    icons = [o.attributes["OvIcon"] for o in objs]
+    assert sorted(icons) == ["4", "5", "6"]
+
+
 def test_ovobj_point_matches_ovkml_coordinates():
     from ovkml_converter.parsers.ovkml_parser import OvkmlParser
     obj_pts = sorted(

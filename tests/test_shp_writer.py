@@ -28,6 +28,23 @@ def test_folder_field_present(tmp_path):
     assert r.record(0)["FOLDER"] == "线路A"
 
 
+def test_attributes_written_to_dbf(tmp_path):
+    # 对象 attributes 应作为 DBF 字段写出，从而在 GIS 属性表中显示
+    obj = GeoObject(name="p1", geo_type=GeoType.POINT,
+                    coordinates=[GeoPoint(lon=101.1, lat=25.4)],
+                    coord_type=CoordType.CGCS2000,
+                    attributes={"ObjID": "123", "tmModify": "2026/06/25 16:00:00"})
+    doc = GeoDocument(name="doc", coord_type=CoordType.CGCS2000,
+                      folders=[GeoFolder(name="f", objects=[obj])])
+    ShpWriter().write(doc, str(tmp_path / "out.shp"))
+    r = shapefile.Reader(str(tmp_path / "out_points.shp"))
+    field_names = [f[0] for f in r.fields if f[0] != "DeletionFlag"]
+    assert "OBJID" in field_names and "TMMODIFY" in field_names
+    rec = r.record(0)
+    assert rec["OBJID"] == "123"
+    assert rec["TMMODIFY"] == "2026/06/25 16:00:00"
+
+
 def test_bd09_prj(tmp_path):
     doc = _point_doc()
     doc.coord_type = CoordType.BD09

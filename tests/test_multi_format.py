@@ -18,6 +18,15 @@ def test_ovjsn_point():
     assert abs(c.lat - 29.67552520) < 1e-6 and abs(c.lon - 100.27230263) < 1e-6
 
 
+def test_ovjsn_extracts_attribute_table():
+    # 奥维记录的属性表内容（ObjID/修改时间/创建时间）应被提取，供 GIS 属性表显示
+    objs = OvjsnParser().parse(str(FIX / "测试点.ovjsn")).get_all_objects()
+    a = objs[0].attributes
+    assert a["ObjID"] == "464016062"
+    assert a["tmModify"] == "2026/06/25 16:12:18"
+    assert a["Time"] == "2026/06/25 16:12:21"
+
+
 def test_ovjsn_line():
     objs = OvjsnParser().parse(str(FIX / "CAD多段线.ovjsn")).get_all_objects()
     assert len(objs) == 1

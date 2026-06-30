@@ -1,3 +1,4 @@
+import re
 import shapefile
 from pathlib import Path
 from ..models.geo_objects import GeoDocument, GeoType, GeoObject, CoordType
@@ -59,32 +60,70 @@ class ShpWriter:
             PRJ_TEMPLATES.get(coord_type, PRJ_TEMPLATES[CoordType.WGS84]), encoding='utf-8')
         Path(shp_path).with_suffix('.cpg').write_text('UTF-8', encoding='utf-8')
 
-    def _new_writer(self, filepath: str):
+    def _attr_fields(self, items):
+        """收集所有对象的属性键，生成 (原始键, DBF字段名) 列表。
+
+        DBF 字段名受限：≤10 字符、仅字母数字下划线、需唯一。奥维记录的属性
+        （ObjID/tmModify/Time 等）据此写入 DBF，从而在 GIS 属性表中显示。
+        """
+        keys = []
+        seen = set()
+        for obj, _ in items:
+            for k in (obj.attributes or {}):
+                if k not in seen:
+                    seen.add(k)
+                    keys.append(k)
+
+        fields = []
+        used = set()
+        for k in keys:
+            name = re.sub(r'[^A-Za-z0-9_]', '', k).upper()[:10] or 'ATTR'
+            base, i = name, 1
+            while name in used:
+                suffix = str(i)
+                name = base[:10 - len(suffix)] + suffix
+                i += 1
+            used.add(name)
+            fields.append((k, name))
+        return fields
+
+    def _new_writer(self, filepath: str, attr_fields):
         w = shapefile.Writer(filepath, encoding='utf-8')
         w.field('NAME', 'C', 100)
         w.field('DESC', 'C', 254)
         w.field('FOLDER', 'C', 100)
+        for _, fname in attr_fields:
+            w.field(fname, 'C', 80)
         return w
 
+    def _record(self, w, obj, folder_name, attr_fields):
+        attrs = obj.attributes or {}
+        values = [obj.name, obj.description or '', folder_name]
+        values += [str(attrs.get(k, '')) for k, _ in attr_fields]
+        w.record(*values)
+
     def _write_points(self, items, filepath: str):
-        w = self._new_writer(filepath)
+        attr_fields = self._attr_fields(items)
+        w = self._new_writer(filepath, attr_fields)
         for obj, folder_name in items:
             if obj.coordinates:
                 c = obj.coordinates[0]
                 w.point(c.lon, c.lat)
-                w.record(obj.name, obj.description or '', folder_name)
+                self._record(w, obj, folder_name, attr_fields)
         w.close()
 
     def _write_lines(self, items, filepath: str):
-        w = self._new_writer(filepath)
+        attr_fields = self._attr_fields(items)
+        w = self._new_writer(filepath, attr_fields)
         for obj, folder_name in items:
             if len(obj.coordinates) >= 2:
                 w.line([[(c.lon, c.lat) for c in obj.coordinates]])
-                w.record(obj.name, obj.description or '', folder_name)
+                self._record(w, obj, folder_name, attr_fields)
         w.close()
 
     def _write_polygons(self, items, filepath: str):
-        w = self._new_writer(filepath)
+        attr_fields = self._attr_fields(items)
+        w = self._new_writer(filepath, attr_fields)
         for obj, folder_name in items:
             if len(obj.coordinates) >= 3:
                 ring = [(c.lon, c.lat) for c in obj.coordinates]
@@ -93,5 +132,5 @@ class ShpWriter:
                 if _signed_area(ring) > 0:
                     ring.reverse()
                 w.poly([ring])
-                w.record(obj.name, obj.description or '', folder_name)
+                self._record(w, obj, folder_name, attr_fields)
         w.close()
