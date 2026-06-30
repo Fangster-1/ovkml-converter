@@ -8,5 +8,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python -m PyInstaller --onefile --windowed --name "奥维数据格式转换" --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module matplotlib --exclude-module numpy --exclude-module PIL --exclude-module scipy --exclude-module jinja2 --exclude-module lxml --exclude-module psutil --exclude-module sympy --exclude-module ezdxf main.py
+python -m PyInstaller --onefile --windowed --name "OvConverter" --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module matplotlib --exclude-module numpy --exclude-module PIL --exclude-module scipy --exclude-module jinja2 --exclude-module lxml --exclude-module psutil --exclude-module sympy --exclude-module ezdxf main.py
+if exist "dist\OvConverter.exe" (
+    move /y "dist\OvConverter.exe" "dist\奥维数据格式转换.exe"
+)
 pause
